@@ -2,9 +2,5 @@
 !/**/
 !*.*
 *.sh
-*.png
-*.jpeg
 *.log
-!test_accidents.png
-!accident.png
 !Makefile
