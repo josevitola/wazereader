@@ -1,6 +1,7 @@
 *
 !/**/
 !*.*
+*screenshot.png
 *.sh
 *.log
 !Makefile

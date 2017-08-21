@@ -74,10 +74,14 @@ int main () {
     chksyscall( (char*)"chmod +x script.sh" );
     chksyscall( (char*)"./script.sh" );
 
-    readAndMatch( (char*) IMGNAME, &points );
+    readAndMatch( (char*) IMGNAME, (char*) "icons/accidente.png", &points );
+    // readAndMatch( (char*) IMGNAME, (char*) "icons/obra.png", &points );
+    // readAndMatch( (char*) IMGNAME, (char*) "icons/via_cerrada.png", &points );
+    // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_grave.png", &points );
+    // readAndMatch( (char*) IMGNAME, (char*) "icons/detenido.png", &points );
+    // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_alto_total.png", &points );
 
     if(points.size() >= 1) {
-      cout << points.size() << endl;
       data.open("data.log", ios::app);
       data << "(" << lat << "," << lng << ")" << endl;
 

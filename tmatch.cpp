@@ -10,10 +10,9 @@ using namespace cv;
 Mat img; Mat templ; Mat result;
 
 int match_method = CV_TM_CCOEFF_NORMED;
-float threshold_min = 0.007; float threshold_max = 0.80;
+float threshold_min = 0.007; float threshold_max = 0.90;
 
 char* image_window = "Source Image";
-string template_name = "icons/via_cerrada.png";
 
 bool doesMatch(float f) {
   if( match_method  == CV_TM_SQDIFF || match_method == CV_TM_SQDIFF_NORMED ) {
@@ -23,11 +22,11 @@ bool doesMatch(float f) {
   }
 }
 
-void readAndMatch( char* imgname, void *out )
+void readAndMatch( char* imgname, char* templname, void *out )
 {
   /// Load image and template
   img = imread( imgname );
-  templ = imread( template_name, 1 );
+  templ = imread( templname, 1 );
   vector<Point> *vec = (vector<Point> *) out;
 
   /// Create windows
@@ -62,9 +61,10 @@ void readAndMatch( char* imgname, void *out )
     }
   }
 
-  imshow( image_window, img_display );
-
-  waitKey(0);
+  if(max >= threshold_max) {
+    imshow( image_window, img_display );
+    waitKey(0);
+  }
 
   return;
 }
