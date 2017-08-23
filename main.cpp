@@ -10,7 +10,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
-#define Q 77
+#define Q 163
 #define WINW 1920
 #define WINH 1080
 
@@ -18,14 +18,23 @@ using namespace std;
 using namespace cv;
 
 /*
- * DELTALAT and DELTALNG values are fixed for a 1920 x 1080 screen
- * running a 100%-zoom Google Chrome window, with a 16z map zoom
- * in Ubuntu 16.04.
+  DLAT and DLNG values are fixed for a 1920 x 1080 screen
+  running a 100%-zoom Google Chrome window, with a 16z map zoom
+  in Ubuntu 16.04.
 */
+
+/*
+  TODO
+  * display all reads in single image
+  FIXME
+  * read cropped images
+*/
+
 const int ZOOM = 17;
-const int PRECISION = 9;
-const double DELTALAT = 0.020891;  // y-axis, increase upwards
-const double DELTALNG = 0.040962;  // x-axis, decrease left
+const int PRECISION = 7;
+const double DLAT = 0.0107;  // y-axis, increase upwards
+const double DLNG = 0.0206;  // x-axis, decrease left
+const double DLOAD = 5;      // console progress bar
 const char* IMGNAME = "screenshot.png";
 
 struct Location {
@@ -46,6 +55,7 @@ void printPoint(ofstream *ofs, float x, float y);
 void signalHandler( int signum );
 
 int main () {
+  cout << currentDateTime() << endl;
   signal(SIGINT, signalHandler);
 
   bash.precision(PRECISION);
@@ -58,7 +68,8 @@ int main () {
 
   initGrid();
 
-  for(int i = 1; i <= Q; i++) {
+  int load = 0;   // used in console progress bar
+  for(int i = 0; i < Q; i++) {
     double lat = grid[i].lat, lng = grid[i].lng;
     struct Location loc;
     vector<Point> points;
@@ -74,12 +85,13 @@ int main () {
     chksyscall( (char*)"chmod +x script.sh" );
     chksyscall( (char*)"./script.sh" );
 
-    readAndMatch( (char*) IMGNAME, (char*) "icons/accidente.png", &points );
-    // readAndMatch( (char*) IMGNAME, (char*) "icons/obra.png", &points );
-    // readAndMatch( (char*) IMGNAME, (char*) "icons/via_cerrada.png", &points );
-    // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_grave.png", &points );
+    // readAndMatch( (char*) IMGNAME, (char*) "icons/accidente.png", &points );
     // readAndMatch( (char*) IMGNAME, (char*) "icons/detenido.png", &points );
+    // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_grave.png", &points );
+    // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_moderado.png", &points );
     // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_alto_total.png", &points );
+    // readAndMatch( (char*) IMGNAME, (char*) "icons/obra.png", &points );
+    readAndMatch( (char*) IMGNAME, (char*) "icons/via_cerrada.png", &points );
 
     if(points.size() >= 1) {
       data.open("data.log", ios::app);
@@ -95,18 +107,28 @@ int main () {
       data.close();
       cout << endl;
     }
+
+    // print progress bar
+    if(((i+1)*100/Q) >= load) {
+      cout << load << "% " << (load/10 == 0 ? " " : "") << "[";
+      for(int j = 0; j < load; j+=DLOAD) cout << "==";
+      for(int j = load; j < 100; j+=DLOAD)  cout << "  ";
+      cout << "]" << endl;
+      load+=DLOAD;
+    }
   }
 
+  cout << currentDateTime() << endl;
   return 0;
 }
 
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res) {
   // image's origin coordinates
-  double oLat = lat + DELTALAT/2;
-  double oLng = lng - DELTALNG/2;
+  double oLat = lat + DLAT/2;
+  double oLng = lng - DLNG/2;
 
-  double resLat = oLat - DELTALAT*((double) pixelLat/WINH);
-  double resLng = oLng + DELTALNG*((double) pixelLng/WINW);
+  double resLat = oLat - DLAT*((double) pixelLat/WINH);
+  double resLng = oLng + DLNG*((double) pixelLng/WINW);
 
   struct Location * locRes = (struct Location *) res;
   locRes->lat = resLat;
@@ -138,19 +160,20 @@ void fillCol(int init, double iniLat, double iniLng, int n) {
 
   ++init;
   for(int j = init; j < init+n-1; j++) {
-    grid[j].lat = grid[j-1].lat - DELTALAT;
+    grid[j].lat = grid[j-1].lat - DLAT;
     grid[j].lng = iniLng;
   }
 }
 
+// TODO change lngs accordingly with new DLNG
 void initGrid() {
-  fillCol(0, 4.8196776, -74.0258801, 9);
-  fillCol(9, 4.7859368, -74.0587103, 13);
-  fillCol(22, 4.7521960, -74.0915405, 17);
-  fillCol(39, 4.7353256, -74.1243707, 16);
-  fillCol(55, 4.7353256, -74.1572009, 13);
-  fillCol(68, 4.6341032, -74.1900311, 5);
-  fillCol(73, 4.6341032, -74.2228613, 4);
+  fillCol(0,  4.81968, -74.02588, 19);
+  fillCol(9,  4.78594, -74.04648, 28);
+  fillCol(22, 4.75220, -74.06708, 36);
+  fillCol(39, 4.73533, -74.08768, 34);
+  fillCol(55, 4.73533, -74.10828, 28);
+  fillCol(68, 4.63410, -74.12888, 11);
+  fillCol(73, 4.63410, -74.14948, 9);
 }
 
 string currentDateTime() {
