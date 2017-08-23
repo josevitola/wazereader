@@ -10,7 +10,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
-#define Q 163
+#define Q 165
 #define WINW 1920
 #define WINH 1080
 
@@ -53,6 +53,7 @@ void fillCol(int init, double iniLat, double iniLng, int n);
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res);
 void initGrid();
 void signalHandler( int signum );
+void writeMatches(char* templname, char* label, double lat, double lng);
 
 int main () {
   cout << currentDateTime() << endl;
@@ -71,8 +72,6 @@ int main () {
   int load = 0;   // used in console progress bar
   for(int i = 0; i < Q; i++) {
     double lat = grid[i].lat, lng = grid[i].lng;
-    struct Location loc;
-    vector<Point> points;
 
     bash.open ("script.sh");
     bash << "#!/bin/bash\n";
@@ -85,32 +84,10 @@ int main () {
     chksyscall( (char*)"chmod +x script.sh" );
     chksyscall( (char*)"./script.sh" );
 
-    // readAndMatch( (char*) IMGNAME, (char*) "icons/accidente.png", &points );
-    // readAndMatch( (char*) IMGNAME, (char*) "icons/detenido.png", &points );
-    // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_grave.png", &points );
-    // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_moderado.png", &points );
-    // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_alto_total.png", &points );
-    // readAndMatch( (char*) IMGNAME, (char*) "icons/obra.png", &points );
-    // readAndMatch( (char*) IMGNAME, (char*) "icons/via_cerrada.png", &points );
-
-    if(points.size() >= 1) {
-      data.open("data.log", ios::app);
-      data << "(" << lat << "," << lng << ")" << endl;
-
-      for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
-        getCoordinates(pos->x, pos->y, lat, lng, &loc);
-        cout << " |-- " << loc.lat << "," << loc.lng << endl;
-        data << " |-- " << loc.lat << "," << loc.lng << endl;
-        if((pos+1) == points.end())  data << endl;
-      }
-
-      data.close();
-      cout << endl;
-    }
+    writeMatches((char *)"icons/accidente.png", (char *)"accidente", lat, lng);
 
     // print progress bar
     if(((i+1)*100/Q) >= load) {
-      cout << lng << "," << lat << endl;
       cout << load << "% " << (load/10 == 0 ? " " : "") << "[";
       for(int j = 0; j < load; j+=DLOAD) cout << "==";
       for(int j = load; j < 100; j+=DLOAD)  cout << "  ";
@@ -122,6 +99,30 @@ int main () {
   cout << currentDateTime() << endl;
   return 0;
 }
+
+void writeMatches(char *templname, char* label, double lat, double lng) {
+  struct Location loc;
+  vector<Point> points;
+
+  fetchMatches( (char*) IMGNAME, templname, &points );
+
+  if(points.size() >= 1) {
+    data.open("data.log", ios::app);
+    // data << "(" << lat << "," << lng << "): " << label << endl;
+
+    for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
+      getCoordinates(pos->x, pos->y, lat, lng, &loc);
+      cout << " |-- " << label << " " << loc.lat << "," << loc.lng << endl;
+      data << " |-- " << label << " " << loc.lat << "," << loc.lng << endl;
+      // if((pos+1) == points.end())  data << endl;
+    }
+
+    data.close();
+    cout << endl;
+  }
+}
+
+
 
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res) {
   // image's origin coordinates
@@ -169,12 +170,12 @@ void fillCol(int init, double iniLat, double iniLng, int n) {
 // TODO change lngs accordingly with new DLNG
 void initGrid() {
   fillCol(0,  4.81968, -74.02588, 19);
-  fillCol(9,  4.78594, -74.04648, 28);
-  fillCol(22, 4.75220, -74.06708, 36);
-  fillCol(39, 4.73533, -74.08768, 34);
-  fillCol(55, 4.73533, -74.10828, 28);
-  fillCol(68, 4.63410, -74.12888, 11);
-  fillCol(73, 4.63410, -74.14948, 9);
+  fillCol(19,  4.78594, -74.04648, 28);
+  fillCol(47, 4.75220, -74.06708, 36);
+  fillCol(83, 4.73533, -74.08768, 34);
+  fillCol(117, 4.73533, -74.10828, 28);
+  fillCol(145, 4.63410, -74.12888, 11);
+  fillCol(156, 4.63410, -74.14948, 9);
 }
 
 string currentDateTime() {
