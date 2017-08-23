@@ -21,19 +21,20 @@ using namespace cv;
   DLAT and DLNG values are fixed for a 1920 x 1080 screen
   running a 100%-zoom Google Chrome window, with a 16z map zoom
   in Ubuntu 16.04.
-*/
 
-/*
   TODO
   * display all reads in single image
   FIXME
+  * false match for accidente.png
+  * improve lat: error increases as match is further from centre?
   * read cropped images
 */
 
 const int ZOOM = 17;
 const int PRECISION = 7;
-const double DLAT = 0.0107;  // y-axis, increase upwards
-const double DLNG = 0.0190;  // x-axis, decrease left
+const int ICONSIZE = 54;
+const double DLAT = 0.0108;  // y-axis, increase upwards
+const double DLNG = 0.0206;  // x-axis, decrease left
 const double DLOAD = 5;      // console progress bar
 const char* IMGNAME = "screenshot.png";
 
@@ -51,7 +52,6 @@ void clean();
 void fillCol(int init, double iniLat, double iniLng, int n);
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res);
 void initGrid();
-void printPoint(ofstream *ofs, double x, double y);
 void signalHandler( int signum );
 
 int main () {
@@ -91,7 +91,7 @@ int main () {
     // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_moderado.png", &points );
     // readAndMatch( (char*) IMGNAME, (char*) "icons/embotellamiento_alto_total.png", &points );
     // readAndMatch( (char*) IMGNAME, (char*) "icons/obra.png", &points );
-    readAndMatch( (char*) IMGNAME, (char*) "icons/via_cerrada.png", &points );
+    // readAndMatch( (char*) IMGNAME, (char*) "icons/via_cerrada.png", &points );
 
     if(points.size() >= 1) {
       data.open("data.log", ios::app);
@@ -110,6 +110,7 @@ int main () {
 
     // print progress bar
     if(((i+1)*100/Q) >= load) {
+      cout << lng << "," << lat << endl;
       cout << load << "% " << (load/10 == 0 ? " " : "") << "[";
       for(int j = 0; j < load; j+=DLOAD) cout << "==";
       for(int j = load; j < 100; j+=DLOAD)  cout << "  ";
@@ -127,8 +128,8 @@ void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *re
   double oLat = lat + DLAT/2;
   double oLng = lng - DLNG/2;
 
-  double resLat = oLat - DLAT*((double) pixelLat/WINH);
-  double resLng = oLng + DLNG*((double) pixelLng/WINW);
+  double resLat = oLat - DLAT*((double) (pixelLat+ICONSIZE/2)/WINH);
+  double resLng = oLng + DLNG*((double) (pixelLng+ICONSIZE/2)/WINW);
 
   struct Location * locRes = (struct Location *) res;
   locRes->lat = resLat;
@@ -201,8 +202,4 @@ void clean() {
   data.close();
 
   bash.close();
-}
-
-void printPoint(ofstream *ofs, double x, double y) {
-  *ofs << x << y;
 }
