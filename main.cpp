@@ -51,7 +51,7 @@ void clean();
 void fillCol(int init, double iniLat, double iniLng, int n);
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res);
 void initGrid();
-void printPoint(ofstream *ofs, float x, float y);
+void printPoint(ofstream *ofs, double x, double y);
 void signalHandler( int signum );
 
 int main () {
@@ -203,6 +203,6 @@ void clean() {
   bash.close();
 }
 
-void printPoint(ofstream *ofs, float x, float y) {
+void printPoint(ofstream *ofs, double x, double y) {
   *ofs << x << y;
 }
