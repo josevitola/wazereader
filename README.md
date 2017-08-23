@@ -1,18 +1,8 @@
-## Synopsis
-
-Image processing and automation project to analyze city traffic in Bogotá.
-
 ## Installation
 
-Clone the repository.
-Check if you have all your dependencies installed. To install all required packages, type
+Remember - you need OpenCV and Google Chrome +59 in your machine!
 
-```
-sudo apt-get install xdotool wmctrl imagemagick google-chrome
-```
-
-In your machine, type from a terminal:
 ```
 make
-./mapRead
+./wazeRead
 ```
