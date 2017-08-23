@@ -33,7 +33,7 @@ using namespace cv;
 const int ZOOM = 17;
 const int PRECISION = 7;
 const double DLAT = 0.0107;  // y-axis, increase upwards
-const double DLNG = 0.0206;  // x-axis, decrease left
+const double DLNG = 0.0190;  // x-axis, decrease left
 const double DLOAD = 5;      // console progress bar
 const char* IMGNAME = "screenshot.png";
 
