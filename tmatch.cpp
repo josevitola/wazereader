@@ -30,10 +30,10 @@ void fetchMatches( char* imgname, char* templname, void *out )
   vector<Point> *vec = (vector<Point> *) out;
 
   /// Create windows
-  // namedWindow( image_window, CV_WINDOW_AUTOSIZE );
-  //
-  // Mat img_display;
-  // img.copyTo( img_display );
+  namedWindow( image_window, CV_WINDOW_AUTOSIZE );
+
+  Mat img_display;
+  img.copyTo( img_display );
 
   /// Create the result matrix
   int result_cols =  img.cols - templ.cols + 1;
@@ -50,21 +50,21 @@ void fetchMatches( char* imgname, char* templname, void *out )
       if(res > max) max = res;
       if(doesMatch(res)) {
         cout << "(" << j << ", " << i << "): " << res << endl;
-        // rectangle( img_display,
-        //   Point(j, i),
-        //   Point(j + templ.cols , i + templ.rows ),
-        //   Scalar::all(0), 2, 8, 0
-        // );
+        rectangle( img_display,
+          Point(j, i),
+          Point(j + templ.cols , i + templ.rows ),
+          Scalar::all(0), 2, 8, 0
+        );
 
         vec->push_back(Point(j, i));
       }
     }
   }
 
-  // if(max >= threshold_max) {
-  //   imshow( image_window, img_display );
-  //   waitKey(0);
-  // }
+  if(max >= threshold_max) {
+    imshow( image_window, img_display );
+    waitKey(0);
+  }
 
   return;
 }

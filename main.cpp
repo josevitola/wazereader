@@ -11,6 +11,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 
 #define Q 165
+#define BARH 62
 #define WINW 1920
 #define WINH 1080
 
@@ -23,6 +24,7 @@ using namespace cv;
   in Ubuntu 16.04.
 
   TODO
+  * enable graphic mode
   * display all reads in single image
   FIXME
   * false match for accidente.png
@@ -55,8 +57,14 @@ void initGrid();
 void signalHandler( int signum );
 void writeMatches(char* templname, char* label, double lat, double lng);
 
-int main () {
+int main (int argc, char argv[]) {
   cout << currentDateTime() << endl;
+
+  // cout << argc << endl;
+  // for(unsigned int i = 0; i < sizeof(argv); i++) {
+  //   cout << argv[i] << endl;
+  // }
+
   signal(SIGINT, signalHandler);
 
   bash.precision(PRECISION);
@@ -64,7 +72,7 @@ int main () {
   cout.precision(PRECISION);
 
   data.open("data.log", ios::app);
-  data << "*** " << currentDateTime() << " ***" << endl << endl;
+  data << "*** " << currentDateTime() << " ***" << endl;
   data.close();
 
   initGrid();
@@ -84,7 +92,7 @@ int main () {
     chksyscall( (char*)"chmod +x script.sh" );
     chksyscall( (char*)"./script.sh" );
 
-    writeMatches((char *)"icons/accidente.png", (char *)"accidente", lat, lng);
+    writeMatches((char *)"icons/via_cerrada.png", (char *)"vía cerrada", lat, lng);
 
     // print progress bar
     if(((i+1)*100/Q) >= load) {
@@ -112,21 +120,17 @@ void writeMatches(char *templname, char* label, double lat, double lng) {
 
     for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
       getCoordinates(pos->x, pos->y, lat, lng, &loc);
-      cout << " |-- " << label << " " << loc.lat << "," << loc.lng << endl;
-      data << " |-- " << label << " " << loc.lat << "," << loc.lng << endl;
-      // if((pos+1) == points.end())  data << endl;
+      cout << label << " " << loc.lat << "," << loc.lng << endl;
+      data << label << "; " << loc.lat << "; " << loc.lng << endl;
     }
 
     data.close();
-    cout << endl;
   }
 }
 
-
-
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res) {
   // image's origin coordinates
-  double oLat = lat + DLAT/2;
+  double oLat = lat + DLAT/2 ;
   double oLng = lng - DLNG/2;
 
   double resLat = oLat - DLAT*((double) (pixelLat+ICONSIZE/2)/WINH);
