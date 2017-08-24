@@ -45,6 +45,7 @@ struct Location {
   double lng;
 };
 
+bool isGraphic;
 ofstream bash, data;
 struct Location grid[Q];
 
@@ -57,8 +58,18 @@ void initGrid();
 void signalHandler( int signum );
 void writeMatches(char* templname, char* label, double lat, double lng);
 
-int main (int argc, char argv[]) {
+int main (int argc, char *argv[]) {
   cout << currentDateTime() << endl;
+
+  if(argc > 1) {
+    for(unsigned int i = 1; i < sizeof(argv); i++) {
+      if(strcmp(argv[i], (char *)"--graphic")) {
+        isGraphic = true;
+      }
+    }
+  } else {
+    isGraphic = false;
+  }
 
   // cout << argc << endl;
   // for(unsigned int i = 0; i < sizeof(argv); i++) {
@@ -112,7 +123,7 @@ void writeMatches(char *templname, char* label, double lat, double lng) {
   struct Location loc;
   vector<Point> points;
 
-  fetchMatches( (char*) IMGNAME, templname, &points );
+  fetchMatches( (char*) IMGNAME, templname, &points, isGraphic );
 
   if(points.size() >= 1) {
     data.open("data.log", ios::app);

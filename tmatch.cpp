@@ -22,26 +22,26 @@ bool doesMatch(float f) {
   }
 }
 
-void fetchMatches( char* imgname, char* templname, void *out )
+void fetchMatches( char* imgname, char* templname, void *out, bool graphic )
 {
   /// Load image and template
+
+  Mat img_display;
   img = imread( imgname );
   templ = imread( templname, 1 );
   vector<Point> *vec = (vector<Point> *) out;
 
   /// Create windows
-  namedWindow( image_window, CV_WINDOW_AUTOSIZE );
-
-  Mat img_display;
-  img.copyTo( img_display );
+  if(graphic) {
+    namedWindow( image_window, CV_WINDOW_AUTOSIZE );
+    img.copyTo( img_display );
+  }
 
   /// Create the result matrix
   int result_cols =  img.cols - templ.cols + 1;
   int result_rows = img.rows - templ.rows + 1;
 
-  /// Do the Matching and Normalize
   matchTemplate( img, templ, result, match_method );
-  // normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
 
   float max = 0;
   for(int i = 0; i < result_rows; i++) {
@@ -49,19 +49,21 @@ void fetchMatches( char* imgname, char* templname, void *out )
       float res = result.at<float>(i,j);
       if(res > max) max = res;
       if(doesMatch(res)) {
-        cout << "(" << j << ", " << i << "): " << res << endl;
-        rectangle( img_display,
-          Point(j, i),
-          Point(j + templ.cols , i + templ.rows ),
-          Scalar::all(0), 2, 8, 0
-        );
+        if(graphic) {
+          cout << "(" << j << ", " << i << "): " << res << endl;
+          rectangle( img_display,
+            Point(j, i),
+            Point(j + templ.cols , i + templ.rows ),
+            Scalar::all(0), 2, 8, 0
+          );
+        }
 
         vec->push_back(Point(j, i));
       }
     }
   }
 
-  if(max >= threshold_max) {
+  if(graphic && max >= threshold_max) {
     imshow( image_window, img_display );
     waitKey(0);
   }
