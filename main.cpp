@@ -59,22 +59,13 @@ void signalHandler( int signum );
 void writeMatches(char* templname, char* label, double lat, double lng);
 
 int main (int argc, char *argv[]) {
-  cout << currentDateTime() << endl;
-
   if(argc > 1) {
-    for(unsigned int i = 1; i < sizeof(argv); i++) {
-      if(strcmp(argv[i], (char *)"--graphic")) {
-        isGraphic = true;
-      }
+    for(int i = 1; i < argc; i++) {
+      isGraphic = strcmp(argv[i], (char *)"--graphic") == 0;
+      if(isGraphic)
+        break;
     }
-  } else {
-    isGraphic = false;
   }
-
-  // cout << argc << endl;
-  // for(unsigned int i = 0; i < sizeof(argv); i++) {
-  //   cout << argv[i] << endl;
-  // }
 
   signal(SIGINT, signalHandler);
 
@@ -82,6 +73,7 @@ int main (int argc, char *argv[]) {
   data.precision(PRECISION);
   cout.precision(PRECISION);
 
+  cout << currentDateTime() << endl;
   data.open("data.log", ios::app);
   data << "*** " << currentDateTime() << " ***" << endl;
   data.close();
@@ -90,21 +82,6 @@ int main (int argc, char *argv[]) {
 
   int load = 0;   // used in console progress bar
   for(int i = 0; i < Q; i++) {
-    double lat = grid[i].lat, lng = grid[i].lng;
-
-    bash.open ("script.sh");
-    bash << "#!/bin/bash\n";
-    bash << "google-chrome --headless --disable-gpu --screenshot --window-size="
-        << WINW << "," << WINH
-        << " \'https://www.waze.com/es-419/livemap?zoom=" << ZOOM
-        << "&lat=" << lat << "&lon=" << lng << "\' &> /dev/null\n";
-    bash.close();
-
-    chksyscall( (char*)"chmod +x script.sh" );
-    chksyscall( (char*)"./script.sh" );
-
-    writeMatches((char *)"icons/via_cerrada.png", (char *)"vía cerrada", lat, lng);
-
     // print progress bar
     if(((i+1)*100/Q) >= load) {
       cout << load << "% " << (load/10 == 0 ? " " : "") << "[";
@@ -113,6 +90,25 @@ int main (int argc, char *argv[]) {
       cout << "]" << endl;
       load+=DLOAD;
     }
+
+    // get latitude and longitude from current grid index
+    double lat = grid[i].lat;
+    double lng = grid[i].lng;
+
+    // write bash script to get map screenshot
+    bash.open ("script.sh");
+    bash << "#!/bin/bash\n";
+    bash << "google-chrome --headless --disable-gpu --screenshot --window-size="
+        << WINW << "," << WINH
+        << " \'https://www.waze.com/es-419/livemap?zoom=" << ZOOM
+        << "&lat=" << lat << "&lon=" << lng << "\' &> /dev/null\n";
+    bash.close();
+
+    // give permissions and execute
+    chksyscall( (char*)"chmod +x script.sh" );
+    chksyscall( (char*)"./script.sh" );
+
+    writeMatches((char *)"icons/via_cerrada.png", (char *)"vía cerrada", lat, lng);
   }
 
   cout << currentDateTime() << endl;
