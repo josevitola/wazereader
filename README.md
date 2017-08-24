@@ -4,7 +4,7 @@
 
 ## Getting Started
 
-This program is specifically designed for a 1920 x 1080 screen running a 100%-zoom Google Chrome window with a 16z map zoom. Currently the program recognizes:
+This program is specifically designed for a 1920 x 1080 screen running a 100%-zoom Google Chrome window with a 17z Waze map. Currently the program recognizes:
 * accidents
 * traffic jams (moderate, heavy, standstill)
 * police
@@ -48,4 +48,4 @@ This project is licensed under the MIT License.
 
 ## Acknowledgments
 
-* This project is based on [MapReader](https://github.com/jdnietov/mapreader) -- a Google Maps-based previous version, which only reads accidents on the map (no, I didn't know what forking was when I wrote these).
+* This project is based on [MapReader](https://github.com/jdnietov/mapreader) -- a Google Maps-based simpler version, which only reads accidents on the map (no, I didn't know what forking was when I wrote these).
