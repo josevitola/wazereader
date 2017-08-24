@@ -19,16 +19,17 @@ using namespace std;
 using namespace cv;
 
 /*
+  ## REQUIREMENTS ##
+
   DLAT and DLNG values are fixed for a 1920 x 1080 screen
   running a 100%-zoom Google Chrome window, with a 16z map zoom
   in Ubuntu 16.04.
 
   TODO
-  * enable graphic mode
   * display all reads in single image
   FIXME
   * false match for accidente.png
-  * improve lat: error increases as match is further from centre?
+  * improve lat: error increases as match is farther from centre?
   * read cropped images
 */
 
