@@ -10,7 +10,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
-#define Q 165
+#define Q 143
 #define BARH 62
 #define WINW 1920
 #define WINH 1080
@@ -33,12 +33,12 @@ using namespace cv;
   * read cropped images
 */
 
-const int ZOOM = 17;
+const int ZOOM      = 17;
 const int PRECISION = 7;
-const int ICONSIZE = 54;
-const double DLAT = 0.0108;  // y-axis, increase upwards
-const double DLNG = 0.0206;  // x-axis, decrease left
-const double DLOAD = 5;      // console progress bar
+const int ICON      = 54;
+const double DLAT   = 0.0108;  // y-axis, increase upwards
+const double DLNG   = 0.0206;  // x-axis, decrease left
+const double DLOAD  = 5;      // console progress bar
 const char* IMGNAME = "screenshot.png";
 
 struct Location {
@@ -46,6 +46,7 @@ struct Location {
   double lng;
 };
 
+int gidx = 0;
 bool isGraphic;
 ofstream bash, data;
 struct Location grid[Q];
@@ -109,6 +110,11 @@ int main (int argc, char *argv[]) {
     chksyscall( (char*)"chmod +x script.sh" );
     chksyscall( (char*)"./script.sh" );
 
+    // writeMatches((char *)"icons/accidente.png", (char *)"accidente", lat, lng);
+    // writeMatches((char *)"icons/detenido.png", (char *)"detenido", lat, lng);
+    writeMatches((char *)"icons/embotellamiento_moderado.png", (char *)"emb moderado", lat, lng);
+    writeMatches((char *)"icons/embotellamiento_grave.png", (char *)"emb grave", lat, lng);
+    writeMatches((char *)"icons/embotellamiento_alto_total.png", (char *)"emb total", lat, lng);
     writeMatches((char *)"icons/via_cerrada.png", (char *)"vía cerrada", lat, lng);
   }
 
@@ -127,8 +133,8 @@ void writeMatches(char *templname, char* label, double lat, double lng) {
     // data << "(" << lat << "," << lng << "): " << label << endl;
 
     for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
-      getCoordinates(pos->x, pos->y, lat, lng, &loc);
-      cout << label << " " << loc.lat << "," << loc.lng << endl;
+      getCoordinates(pos->x+ICON/2, pos->y+ICON, lat, lng, &loc);
+      cout << label << " " << loc.lng << "," << loc.lat << endl;
       data << label << "; " << loc.lat << "; " << loc.lng << endl;
     }
 
@@ -141,8 +147,8 @@ void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *re
   double oLat = lat + DLAT/2 ;
   double oLng = lng - DLNG/2;
 
-  double resLat = oLat - DLAT*((double) (pixelLat+ICONSIZE/2)/WINH);
-  double resLng = oLng + DLNG*((double) (pixelLng+ICONSIZE/2)/WINW);
+  double resLat = oLat - DLAT*((double) pixelLat/(WINH-BARH));
+  double resLng = oLng + DLNG*((double) pixelLng/WINW);
 
   struct Location * locRes = (struct Location *) res;
   locRes->lat = resLat;
@@ -168,26 +174,30 @@ void chksyscall(char* line) {
   }
 }
 
-void fillCol(int init, double iniLat, double iniLng, int n) {
-  grid[init].lat = iniLat;
-  grid[init].lng = iniLng;
+void fillCol(double iniLat, double iniLng, int n) {
+  grid[gidx].lat = iniLat;
+  grid[gidx].lng = iniLng;
 
-  ++init;
-  for(int j = init; j < init+n-1; j++) {
-    grid[j].lat = grid[j-1].lat - DLAT;
-    grid[j].lng = iniLng;
+  for(int j = 0; j < n; j++) {
+    grid[++gidx].lat = grid[gidx-1].lat - DLAT;
+    grid[gidx].lng = iniLng;
+    cout << gidx << endl;
   }
 }
 
 // TODO change lngs accordingly with new DLNG
 void initGrid() {
-  fillCol(0,  4.81968, -74.02588, 19);
-  fillCol(19,  4.78594, -74.04648, 28);
-  fillCol(47, 4.75220, -74.06708, 36);
-  fillCol(83, 4.73533, -74.08768, 34);
-  fillCol(117, 4.73533, -74.10828, 28);
-  fillCol(145, 4.63410, -74.12888, 11);
-  fillCol(156, 4.63410, -74.14948, 9);
+  gidx = 0;
+  fillCol(4.8196, -74.02588, 11);
+  fillCol(4.7980, -74.04648, 13);
+  fillCol(4.7635, -74.06708, 18);
+  fillCol(4.7569, -74.08768, 23);
+  fillCol(4.7569, -74.10828, 25);
+  fillCol(4.7421, -74.12888, 19);
+  fillCol(4.6989, -74.14948, 15);
+  fillCol(4.6532, -74.17008, 8);
+  fillCol(4.6424, -74.19068, 6);
+  fillCol(4.6316, -74.21128, 5);
 }
 
 string currentDateTime() {

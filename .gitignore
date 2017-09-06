@@ -1,7 +1,6 @@
 *
-!/**/
-!*.*
-*screenshot.png
-*.sh
-*.log
+!.gitignore
+!*.cpp
+!*.h
+!*.md
 !Makefile
