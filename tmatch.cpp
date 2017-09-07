@@ -10,7 +10,7 @@ using namespace cv;
 Mat img; Mat templ; Mat result;
 
 int match_method = CV_TM_CCOEFF_NORMED;
-float threshold_min = 0.007; float threshold_max = 0.90;
+float threshold_min = 0.007; float threshold_max = 0.91;
 
 char* image_window = "Source Image";
 
@@ -66,6 +66,7 @@ void fetchMatches( char* imgname, char* templname, void *out, bool graphic )
   if(graphic && max >= threshold_max) {
     imshow( image_window, img_display );
     waitKey(0);
+    destroyAllWindows();
   }
 
   return;

@@ -110,12 +110,12 @@ int main (int argc, char *argv[]) {
     chksyscall( (char*)"chmod +x script.sh" );
     chksyscall( (char*)"./script.sh" );
 
-    // writeMatches((char *)"icons/accidente.png", (char *)"accidente", lat, lng);
+    writeMatches((char *)"icons/accidente.png", (char *)"accidente", lat, lng);
     // writeMatches((char *)"icons/detenido.png", (char *)"detenido", lat, lng);
-    writeMatches((char *)"icons/embotellamiento_moderado.png", (char *)"emb moderado", lat, lng);
-    writeMatches((char *)"icons/embotellamiento_grave.png", (char *)"emb grave", lat, lng);
-    writeMatches((char *)"icons/embotellamiento_alto_total.png", (char *)"emb total", lat, lng);
-    writeMatches((char *)"icons/via_cerrada.png", (char *)"vía cerrada", lat, lng);
+    // writeMatches((char *)"icons/embotellamiento_moderado.png", (char *)"emb moderado", lat, lng);
+    // writeMatches((char *)"icons/embotellamiento_grave.png", (char *)"emb grave", lat, lng);
+    // writeMatches((char *)"icons/embotellamiento_alto_total.png", (char *)"emb total", lat, lng);
+    // writeMatches((char *)"icons/via_cerrada.png", (char *)"vía cerrada", lat, lng);
   }
 
   cout << currentDateTime() << endl;
@@ -130,10 +130,8 @@ void writeMatches(char *templname, char* label, double lat, double lng) {
 
   if(points.size() >= 1) {
     data.open("data.log", ios::app);
-    // data << "(" << lat << "," << lng << "): " << label << endl;
-
     for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
-      getCoordinates(pos->x+ICON/2, pos->y+ICON, lat, lng, &loc);
+      getCoordinates(pos->x+ICON/2, pos->y+ICON/2, lat, lng, &loc);
       cout << label << " " << loc.lng << "," << loc.lat << endl;
       data << label << "; " << loc.lat << "; " << loc.lng << endl;
     }
@@ -181,7 +179,6 @@ void fillCol(double iniLat, double iniLng, int n) {
   for(int j = 0; j < n; j++) {
     grid[++gidx].lat = grid[gidx-1].lat - DLAT;
     grid[gidx].lng = iniLng;
-    cout << gidx << endl;
   }
 }
 
