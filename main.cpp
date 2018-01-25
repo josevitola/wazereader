@@ -47,7 +47,7 @@ struct Location {
 };
 
 int gidx = 0;
-bool isGraphic;
+bool graphicMode, debugMode;
 ofstream bash, data;
 struct Location grid[Q];
 
@@ -62,10 +62,12 @@ void writeMatches(char* templname, char* label, double lat, double lng);
 
 int main (int argc, char *argv[]) {
   if(argc > 1) {
+    graphicMode = false;    
+    debugMode = false;
+
     for(int i = 1; i < argc; i++) {
-      isGraphic = strcmp(argv[i], (char *)"--graphic") == 0;
-      if(isGraphic)
-        break;
+      graphicMode = graphicMode || strcmp(argv[i], (char *)"--graphic") == 0;
+      debugMode = debugMode || strcmp(argv[i], (char *)"--debug") == 0;
     }
   }
 
@@ -126,14 +128,14 @@ void writeMatches(char *templname, char* label, double lat, double lng) {
   struct Location loc;
   vector<Point> points;
 
-  fetchMatches( (char*) IMGNAME, templname, &points, isGraphic );
+  fetchMatches( (char*) IMGNAME, templname, &points, graphicMode, debugMode );
 
   if(points.size() >= 1) {
     data.open("data.log", ios::app);
     for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
       getCoordinates(pos->x+ICON/2, pos->y+ICON/2, lat, lng, &loc);
       cout << label << " " << loc.lng << "," << loc.lat << endl;
-      data << label << "; " << loc.lat << "; " << loc.lng << endl;
+      data << label << " " << loc.lat << " " << loc.lng << endl;
     }
 
     data.close();

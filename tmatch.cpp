@@ -22,7 +22,7 @@ bool doesMatch(float f) {
   }
 }
 
-void fetchMatches( char* imgname, char* templname, void *out, bool graphic )
+void fetchMatches( char* imgname, char* templname, void *out, bool graphic, bool debug )
 {
   /// Load image and template
 
@@ -32,7 +32,7 @@ void fetchMatches( char* imgname, char* templname, void *out, bool graphic )
   vector<Point> *vec = (vector<Point> *) out;
 
   /// Create windows
-  if(graphic) {
+  if(graphic || debug) {
     namedWindow( image_window, CV_WINDOW_AUTOSIZE );
     img.copyTo( img_display );
   }
@@ -49,7 +49,7 @@ void fetchMatches( char* imgname, char* templname, void *out, bool graphic )
       float res = result.at<float>(i,j);
       if(res > max) max = res;
       if(doesMatch(res)) {
-        if(graphic) {
+        if(graphic || debug) {
           cout << "(" << j << ", " << i << "): " << res << endl;
           rectangle( img_display,
             Point(j, i),
@@ -63,7 +63,7 @@ void fetchMatches( char* imgname, char* templname, void *out, bool graphic )
     }
   }
 
-  if(graphic && max >= threshold_max) {
+  if((graphic && max >= threshold_max) || debug) {
     imshow( image_window, img_display );
     waitKey(0);
     destroyAllWindows();
