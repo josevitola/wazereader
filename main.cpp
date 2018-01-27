@@ -25,12 +25,21 @@ using namespace cv;
   running a 100%-zoom Google Chrome window, with a 16z map zoom
   in Ubuntu 16.04.
 
-  TODO
+  TODO:
+  * check system requirements:
+  *** opencv
+  *** chrome
+  *** python3 (and its dependencies)
+
   * display all reads in single image
-  FIXME
+  * check when flag in args is not recognized
+  (http://www.cplusplus.com/articles/DEN36Up4/)
+
+  FIXME:
   * false match for accidente.png
   * improve lat: error increases as match is farther from centre?
   * read cropped images
+  * emb_moderado is also read as emb_grave and emb_total
 */
 
 const int ZOOM      = 17;
@@ -40,6 +49,7 @@ const double DLAT   = 0.0108;  // y-axis, increase upwards
 const double DLNG   = 0.0206;  // x-axis, decrease left
 const double DLOAD  = 5;      // console progress bar
 const char* IMGNAME = "screenshot.png";
+const char* LOGNAME = "coordinate.log";
 
 struct Location {
   double lat;
@@ -61,6 +71,7 @@ void signalHandler( int signum );
 void writeMatches(char* templname, char* label, double lat, double lng);
 
 int main (int argc, char *argv[]) {
+  // get execution flags
   if(argc > 1) {
     graphicMode = false;    
     debugMode = false;
@@ -69,7 +80,7 @@ int main (int argc, char *argv[]) {
     for(int i = 1; i < argc; i++) {
       graphicMode = graphicMode || strcmp(argv[i], (char *)"--graphic") == 0;
       debugMode = debugMode || strcmp(argv[i], (char *)"--debug") == 0;
-      allMode = allMode || strcmp(argv[i], (char *)"-A") == 0 || strcmp(argv[i], (char *)"-all") == 0;
+      allMode = allMode || strcmp(argv[i], (char *)"-A") == 0 || strcmp(argv[i], (char *)"--all") == 0;
     }
   }
 
@@ -80,7 +91,7 @@ int main (int argc, char *argv[]) {
   cout.precision(PRECISION);
 
   cout << currentDateTime() << endl;
-  data.open("data.log", ios::app);
+  data.open(LOGNAME, ios::app);
   data << "*** " << currentDateTime() << " ***" << endl;
   data.close();
 
@@ -97,11 +108,9 @@ int main (int argc, char *argv[]) {
       load+=DLOAD;
     }
 
-    // get latitude and longitude from current grid index
     double lat = grid[i].lat;
     double lng = grid[i].lng;
 
-    // write bash script to get map screenshot
     bash.open ("script.sh");
     bash << "#!/bin/bash\n";
     bash << "google-chrome --headless --disable-gpu --screenshot --window-size="
@@ -110,14 +119,13 @@ int main (int argc, char *argv[]) {
         << "&lat=" << lat << "&lon=" << lng << "\' &> /dev/null\n";
     bash.close();
 
-    // give permissions and execute
     chksyscall( (char*)"chmod +x script.sh" );
     chksyscall( (char*)"./script.sh" );
 
+    // write to file
     writeMatches((char *)"icons/accidente.png", (char *)"accidente", lat, lng);
     if(allMode) {
       writeMatches((char *)"icons/detenido.png", (char *)"detenido", lat, lng);
-      // FIXME: emb_moderado is also read as emb_grave and emb_total
       writeMatches((char *)"icons/embotellamiento_moderado.png", (char *)"emb moderado", lat, lng);
       writeMatches((char *)"icons/embotellamiento_grave.png", (char *)"emb grave", lat, lng);
       writeMatches((char *)"icons/embotellamiento_alto_total.png", (char *)"emb total", lat, lng);
@@ -126,6 +134,14 @@ int main (int argc, char *argv[]) {
   }
 
   cout << currentDateTime() << endl;
+  cout << "map reading done. fetching coordinates from file..." << endl;
+
+  chksyscall("python3 locate.py");
+  cout << "fetch done. cleaning and exiting..." << endl;
+
+  chksyscall("rm coordinate.log");
+  clean();
+
   return 0;
 }
 
@@ -136,11 +152,11 @@ void writeMatches(char *templname, char* label, double lat, double lng) {
   fetchMatches( (char*) IMGNAME, templname, &points, graphicMode, debugMode );
 
   if(points.size() >= 1) {
-    data.open("data.log", ios::app);
+    data.open(LOGNAME, ios::app);
     for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
       getCoordinates(pos->x+ICON/2, pos->y+ICON/2, lat, lng, &loc);
       cout << label << " " << loc.lng << "," << loc.lat << endl;
-      data << label << "; " << loc.lat << " " << loc.lng << endl;
+      data << label << "; " << loc.lat << "; " << loc.lng << endl;
     }
 
     data.close();
@@ -169,9 +185,7 @@ void chksyscall(char* line) {
   }
   else
   {
-    if (WIFEXITED(status)) {
-      // cout << "Program returned normally, exit code " << WEXITSTATUS(status) << '\n';
-    } else {
+    if (!WIFEXITED(status)) {
       clean();
       cout << "Call to " << line << "was interrupted. Exiting...\n";
       exit(-1);
@@ -222,12 +236,15 @@ void signalHandler( int signum ) {
 }
 
 void clean() {
-  data.open("data.log", ios::app);
+  cout << "closing files..." << endl;
+  data.open(LOGNAME, ios::app);
   data << endl;
   data.close();
-
   bash.close();
 
+  cout << "deleting auxiliary files..." << endl;
   chksyscall("rm screenshot.png");
   chksyscall("rm script.sh");
+
+  cout << "done." << endl;
 }

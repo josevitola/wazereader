@@ -19,6 +19,7 @@ For a simpler version you can also check out [MapReader](https://github.com/jdni
 - G++ compiler
 - Google Chrome +59.0 (uses `--headless` flag)
 - OpenCV 2.4 (you can follow the [official instructions](http://docs.opencv.org/2.4/doc/tutorials/introduction/linux_install/linux_install.html) -- or use [these](https://github.com/jayrambhia/Install-OpenCV) handy scripts)
+- Python 3.5+ (`requests` module)
 
 ## Installing
 
