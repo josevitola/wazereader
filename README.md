@@ -33,11 +33,13 @@ make
 ## Usage
 
 ```
-./wazeReader [--graphic]
+./wazeReader [--graphic] [--debug] [-A, --all]
 ```
 
 All results will be written to a `data.log` file.
-- You can add a `--graphic` flag to display results on a window.
+- `--graphic`: display each match on a window.
+- `--debug`: display every snapshot fetched, regardless of the matches in it.
+- `-A, --all`: fetch all types of events (not just accidents, by default)
 
 ## Authors
 
