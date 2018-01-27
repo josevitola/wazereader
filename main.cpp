@@ -47,7 +47,7 @@ struct Location {
 };
 
 int gidx = 0;
-bool graphicMode, debugMode;
+bool graphicMode, debugMode, allMode;
 ofstream bash, data;
 struct Location grid[Q];
 
@@ -64,10 +64,12 @@ int main (int argc, char *argv[]) {
   if(argc > 1) {
     graphicMode = false;    
     debugMode = false;
+    allMode = false;
 
     for(int i = 1; i < argc; i++) {
       graphicMode = graphicMode || strcmp(argv[i], (char *)"--graphic") == 0;
       debugMode = debugMode || strcmp(argv[i], (char *)"--debug") == 0;
+      allMode = allMode || strcmp(argv[i], (char *)"-A") == 0 || strcmp(argv[i], (char *)"-all") == 0;
     }
   }
 
@@ -113,11 +115,14 @@ int main (int argc, char *argv[]) {
     chksyscall( (char*)"./script.sh" );
 
     writeMatches((char *)"icons/accidente.png", (char *)"accidente", lat, lng);
-    // writeMatches((char *)"icons/detenido.png", (char *)"detenido", lat, lng);
-    // writeMatches((char *)"icons/embotellamiento_moderado.png", (char *)"emb moderado", lat, lng);
-    // writeMatches((char *)"icons/embotellamiento_grave.png", (char *)"emb grave", lat, lng);
-    // writeMatches((char *)"icons/embotellamiento_alto_total.png", (char *)"emb total", lat, lng);
-    // writeMatches((char *)"icons/via_cerrada.png", (char *)"vía cerrada", lat, lng);
+    if(allMode) {
+      writeMatches((char *)"icons/detenido.png", (char *)"detenido", lat, lng);
+      // FIXME: emb_moderado is also read as emb_grave and emb_total
+      writeMatches((char *)"icons/embotellamiento_moderado.png", (char *)"emb moderado", lat, lng);
+      writeMatches((char *)"icons/embotellamiento_grave.png", (char *)"emb grave", lat, lng);
+      writeMatches((char *)"icons/embotellamiento_alto_total.png", (char *)"emb total", lat, lng);
+      writeMatches((char *)"icons/via_cerrada.png", (char *)"vía cerrada", lat, lng);
+    }
   }
 
   cout << currentDateTime() << endl;
@@ -135,7 +140,7 @@ void writeMatches(char *templname, char* label, double lat, double lng) {
     for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
       getCoordinates(pos->x+ICON/2, pos->y+ICON/2, lat, lng, &loc);
       cout << label << " " << loc.lng << "," << loc.lat << endl;
-      data << label << " " << loc.lat << " " << loc.lng << endl;
+      data << label << "; " << loc.lat << " " << loc.lng << endl;
     }
 
     data.close();
@@ -168,7 +173,7 @@ void chksyscall(char* line) {
       // cout << "Program returned normally, exit code " << WEXITSTATUS(status) << '\n';
     } else {
       clean();
-      cout << "Program exited abnormally\n";
+      cout << "Call to " << line << "was interrupted. Exiting...\n";
       exit(-1);
     }
   }
@@ -222,4 +227,7 @@ void clean() {
   data.close();
 
   bash.close();
+
+  chksyscall("rm screenshot.png");
+  chksyscall("rm script.sh");
 }

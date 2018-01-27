@@ -1,6 +1,6 @@
-CC=g++
+CC=g++ -w
 CFLAGS=-I.
 OPCVFLAGS=`pkg-config --cflags --libs opencv`
 
-wazeRead: main.cpp tmatch.cpp
-	$(CC) main.cpp tmatch.cpp -o wazeRead $(CFLAGS) $(OPCVFLAGS)
+wazeread: main.cpp tmatch.cpp
+	$(CC) main.cpp tmatch.cpp -o wazeread $(CFLAGS) $(OPCVFLAGS)
