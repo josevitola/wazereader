@@ -1,7 +1,4 @@
-*
-!.gitignore
-!*.cpp
-!*.py
-!*.h
-!*.md
-!Makefile
+.vscode
+coordinate.log
+wazeread
+screenshot.png
