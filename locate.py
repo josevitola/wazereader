@@ -7,7 +7,7 @@ TODO: check if system has requirements - if not, install them
 TODO: include exact time of match
 TODO: progress bar
 
-FIXME: addresses are too vague. select best one
+FIXME: select best from multiple addresses
 """
 
 import requests
@@ -37,6 +37,7 @@ def main():
 
         req = requests.get(GOOGLE_MAPS_API_URL, params=params)
         res = req.json()
+        print(res)
         result = res['results'][0]
         address = result['formatted_address']
 

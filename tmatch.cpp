@@ -27,9 +27,16 @@ void fetchMatches( char* imgname, char* templname, void *out, bool graphic, bool
   /// Load image and template
 
   Mat img_display;
+
+  vector<Point> *vec = (vector<Point> *) out;
   img = imread( imgname );
   templ = imread( templname, 1 );
-  vector<Point> *vec = (vector<Point> *) out;
+
+  if( img.empty() ) {
+    cout << "Could not open or find the image " << imgname << endl;
+    vec->push_back(Point(-1,-1));
+    return ;
+  }
 
   /// Create windows
   if(graphic || debug) {

@@ -30,6 +30,8 @@ using namespace cv;
   *** opencv
   *** chrome
   *** python3 (and its dependencies)
+  *** xdotool
+  *** scrot
 
   * display all reads in single image
   * check when flag in args is not recognized
@@ -45,6 +47,7 @@ using namespace cv;
 const int ZOOM      = 17;
 const int PRECISION = 7;
 const int ICON      = 54;
+const int DELAY     = 4;
 const double DLAT   = 0.0108;  // y-axis, increase upwards
 const double DLNG   = 0.0206;  // x-axis, decrease left
 const double DLOAD  = 5;      // console progress bar
@@ -113,30 +116,36 @@ int main (int argc, char *argv[]) {
 
     bash.open ("script.sh");
     bash << "#!/bin/bash\n";
-    bash << "google-chrome --headless --disable-gpu --screenshot --window-size="
-        << WINW << "," << WINH
-        << " \'https://www.waze.com/es-419/livemap?zoom=" << ZOOM
-        << "&lat=" << lat << "&lon=" << lng << "\' &> /dev/null\n";
+
+    // open browser
+    bash << "google-chrome --new-window " << " \'https://www.waze.com/es-419/livemap?zoom=" 
+      << ZOOM << "&lat=" << lat << "&lon=" << lng << "\' &> /dev/null\n";
+    if(i == 0)  bash << "xdotool key F11\n";  // TODO: enable --kiosk mode
+
+    // wait and take screenshot
+    bash << "scrot --delay " << DELAY << " -c screenshot.png\n";
+    bash << "xdotool key Ctrl+w\n";
+    
     bash.close();
 
     chksyscall( (char*)"chmod +x script.sh" );
     chksyscall( (char*)"./script.sh" );
 
-    // write to file
     writeMatches((char *)"icons/accidente.png", (char *)"accidente", lat, lng);
+    /*
     if(allMode) {
       writeMatches((char *)"icons/detenido.png", (char *)"detenido", lat, lng);
       writeMatches((char *)"icons/embotellamiento_moderado.png", (char *)"emb moderado", lat, lng);
       writeMatches((char *)"icons/embotellamiento_grave.png", (char *)"emb grave", lat, lng);
       writeMatches((char *)"icons/embotellamiento_alto_total.png", (char *)"emb total", lat, lng);
       writeMatches((char *)"icons/via_cerrada.png", (char *)"vía cerrada", lat, lng);
-    }
+    }*/
   }
 
   cout << currentDateTime() << endl;
   cout << "map reading done. fetching coordinates from file..." << endl;
 
-  chksyscall("python3 locate.py");
+  chksyscall("python3 locate.py &");
   cout << "fetch done. cleaning and exiting..." << endl;
 
   chksyscall("rm coordinate.log");
