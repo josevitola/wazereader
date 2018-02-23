@@ -28,10 +28,7 @@ using namespace cv;
   TODO:
   * check system requirements:
   *** opencv
-  *** chrome
   *** python3 (and its dependencies)
-  *** xdotool
-  *** scrot
 
   * display all reads in single image
   * check when flag in args is not recognized
@@ -86,6 +83,8 @@ int main (int argc, char *argv[]) {
       allMode = allMode || strcmp(argv[i], (char *)"-A") == 0 || strcmp(argv[i], (char *)"--all") == 0;
     }
   }
+
+  chksyscall("sudo ./setup.sh");
 
   signal(SIGINT, signalHandler);
 
