@@ -1,4 +1,5 @@
 .vscode
-coordinate.log
+*.log
 wazeread
 screenshot.png
+test.png

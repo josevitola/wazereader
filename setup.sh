@@ -1,3 +1,5 @@
+# TODO: check for C++ and specific program dependencies
+
 # install Ubuntu dependencies
 if [ -z $(command -v google-chrome) ]
 then
