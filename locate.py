@@ -14,8 +14,8 @@ import requests
 
 GOOGLE_MAPS_API_URL = 'http://maps.googleapis.com/maps/api/geocode/json'
 
-LOGNAME = "coordinate.log"
-DATANAME = "data.log"
+LOGNAME = "data-wr.log"
+DATANAME = "data-wr-addr.log"
 
 def main():
     """Main function. Read coordinates, fetch addresses and write on file."""

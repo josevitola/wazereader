@@ -85,7 +85,7 @@ int main (int argc, char *argv[]) {
     }
   }
 
-  chksyscall("sudo ./setup.sh");
+  chksyscall("./setup.sh");
 
   signal(SIGINT, signalHandler);
 
@@ -111,22 +111,16 @@ int main (int argc, char *argv[]) {
 
     bash.open ("script.sh");
     bash << "#!/bin/bash\n";
-
-    // open browser
-    bash << "google-chrome --new-window " << " \'https://www.waze.com/es-419/livemap?zoom=" 
-      << ZOOM << "&lat=" << lat << "&lon=" << lng << "\' &> /dev/null\n";
-    bash << "xdotool key F11\n";
-
-    // wait and take screenshot
-    bash << "scrot --delay " << DELAY << " -c screenshot.png\n";
-    bash << "xdotool key Ctrl+w\n";
-    
+    bash << "google-chrome --headless --disable-gpu --screenshot --window-size="
+        << WINW << "," << WINH
+        << " \'https://www.waze.com/es-419/livemap?zoom=" << ZOOM
+        << "&lat=" << lat << "&lon=" << lng << "\' &> /dev/null\n";
     bash.close();
 
     chksyscall( (char*)"chmod +x script.sh" );
     chksyscall( (char*)"./script.sh" );
 
-    writeMatches((char *)"icons/accidente2.png", (char *)"accidente", lat, lng);
+    writeMatches((char *)"icons/accidente.png", (char *)"accidente", lat, lng);
   }
 
   cout << currentDateTime() << endl;
@@ -154,7 +148,7 @@ void writeMatches(char *templname, char* label, double lat, double lng) {
   struct Location loc;
   vector<Point> points;
 
-  fetchMatches( (char*) "test.png", templname, &points, graphicMode, debugMode );
+  fetchMatches( (char*) IMGNAME, templname, &points, graphicMode, debugMode );
 
   if(points.size() >= 1) {
     data.open(LOGNAME, ios::app);
