@@ -1,4 +1,13 @@
-# TODO: check for C++ and specific program dependencies
+# TODO: check for C++ and specific program dependencies, check for 
+if [ -z $(sudo updatedb && locate OpenCVConfig.cmake)]
+then
+    echo 'OpenCV was not found on this system. Installing OpenCV...'
+    git clone https://github.com/jayrambhia/Install-OpenCV
+    cd Install-OpenCV/
+    cd Ubuntu/
+    chmod +x *
+    ./opencv_latest.sh
+fi
 
 # install Ubuntu dependencies
 if [ -z $(command -v google-chrome) ]
