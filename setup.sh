@@ -1,5 +1,5 @@
 # TODO: check for C++ and specific program dependencies, check for 
-if [ -z $(sudo updatedb && locate OpenCVConfig.cmake)]
+if [ -z $(sudo updatedb && locate OpenCVConfig.cmake) ];
 then
     echo 'OpenCV was not found on this system. Installing OpenCV...'
     git clone https://github.com/jayrambhia/Install-OpenCV
