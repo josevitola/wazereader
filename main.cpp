@@ -14,32 +14,10 @@
 #define BARH 62
 #define WINW 1920
 #define WINH 1080
+#define NMODS 5
 
 using namespace std;
 using namespace cv;
-
-/*
-  ## REQUIREMENTS ##
-
-  DLAT and DLNG values are fixed for a 1920 x 1080 screen
-  running a 100%-zoom Google Chrome window, with a 16z map zoom
-  in Ubuntu 16.04.
-
-  TODO:
-  * check system requirements:
-  *** opencv
-  *** python3 (and its dependencies)
-
-  * display all reads in single image
-  * check when flag in args is not recognized
-  (http://www.cplusplus.com/articles/DEN36Up4/)
-
-  FIXME:
-  * false match for accidente.png
-  * improve lat: error increases as match is farther from centre?
-  * read cropped images
-  * emb_moderado is also read as emb_grave and emb_total
-*/
 
 const int ZOOM      = 17;
 const int PRECISION = 7;
@@ -56,8 +34,22 @@ struct Location {
   double lng;
 };
 
+char *DIR = "icons/";
+bool READFILES[NMODS];
+char *FILENAMES[NMODS] = {
+  "accidente.png", "detenido.png", "embotellamiento_alto_total.png",
+  "obra.png", "via_cerrada.png"
+};
+char *FILELABELS[NMODS] = {
+  "accidente", "detenido", "embotellamiento",
+  "obra", "via cerrada"
+};
+char *FLAGNAMES[NMODS] = {
+  "--acc", "--det", "--emb", "--obra", "--via",
+};
+
 int gidx = 0;
-bool graphicMode, debugMode, allMode;
+bool graphicMode, debugMode;
 ofstream bash, data;
 struct Location grid[Q];
 
@@ -67,21 +59,52 @@ void clean();
 void fillCol(int init, double iniLat, double iniLng, int n);
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res);
 void initGrid();
-void printProgress(int i, int load);
+void printProgressBar(int i, int load);
 void signalHandler( int signum );
-void writeMatches(char* templname, char* label, double lat, double lng);
+void writeMatch(char* templname, char* label, double lat, double lng);
+void writeMatches(double lat, double lng);
 
 int main (int argc, char *argv[]) {
-  // get execution flags
-  if(argc > 1) {
-    graphicMode = false;    
-    debugMode = false;
-    allMode = false;
+  // initialize all flags in false
+  bool all = false;  
+  graphicMode = false;    
+  debugMode = false;
+  READFILES[0] = true;
+  for(int i=1; i<NMODS; i++) {
+    READFILES[i] = false; 
+  }
 
+  if(argc > 1) {
     for(int i = 1; i < argc; i++) {
-      graphicMode = graphicMode || strcmp(argv[i], (char *)"--graphic") == 0;
-      debugMode = debugMode || strcmp(argv[i], (char *)"--debug") == 0;
-      allMode = allMode || strcmp(argv[i], (char *)"-A") == 0 || strcmp(argv[i], (char *)"--all") == 0;
+      char arg[10];
+      strcpy(arg, argv[i]);
+      
+      graphicMode = graphicMode || strcmp(arg, (char *)"--graphic") == 0;
+      debugMode = debugMode || strcmp(arg, (char *)"--debug") == 0;
+
+      if(all) continue;
+      if(strcmp(arg, (char *)"-A") == 0 || strcmp(arg, (char *)"--all") == 0) {
+        all = true;
+        cout << "fetching all icons...\n";
+        for(int j=1; j<NMODS; j++) {
+          READFILES[j] = true;
+        }
+        continue;
+      }
+
+      bool found = false;
+      for(int j=0; j<NMODS; j++)  {// TODO: can't add same flag more than once
+        if(strcmp(arg, (char *)FLAGNAMES[j]) == 0) {
+          READFILES[j] = true; 
+          cout << "fetching " << FILELABELS[j] << '\n';
+          found = true;
+          break;
+        }}
+      
+      if(!found) {
+        cout << arg << " is not a valid flag.\nexiting...\n";
+        return 0;
+      }
     }
   }
 
@@ -102,8 +125,7 @@ int main (int argc, char *argv[]) {
 
   int load = 0;   // used in console progress bar
   for(int i = 0; i < Q; i++) {
-    // print progress bar
-    printProgress(i, load);
+    printProgressBar(i, load);
     load+=DLOAD;
 
     double lat = grid[i].lat;
@@ -120,7 +142,7 @@ int main (int argc, char *argv[]) {
     chksyscall( (char*)"chmod +x script.sh" );
     chksyscall( (char*)"./script.sh" );
 
-    writeMatches((char *)"icons/accidente.png", (char *)"accidente", lat, lng);
+    writeMatches(lat, lng);
   }
 
   cout << currentDateTime() << endl;
@@ -135,7 +157,7 @@ int main (int argc, char *argv[]) {
   return 0;
 }
 
-void printProgress(int i, int load) {
+void printProgressBar(int i, int load) {
   if(((i+1)*100/Q) >= load) {
     cout << load << "% " << (load/10 == 0 ? " " : "") << "[";
     for(int j = 0; j < load; j+=DLOAD) cout << "==";
@@ -144,7 +166,7 @@ void printProgress(int i, int load) {
   }
 }
 
-void writeMatches(char *templname, char* label, double lat, double lng) {
+void writeMatch(char *templname, char* label, double lat, double lng) {
   struct Location loc;
   vector<Point> points;
 
@@ -158,9 +180,18 @@ void writeMatches(char *templname, char* label, double lat, double lng) {
       data << currentDateTime() << "," << label << "," << loc.lat << "," << loc.lng << endl;
     }
     
-
     data.close();
   }
+}
+
+void writeMatches(double lat, double lng) {
+  for(int i=0; i<NMODS; i++)
+    if(READFILES[i]) {
+      char filename[50];
+      strcpy(filename, DIR);
+      strcat(filename, FILENAMES[i]);
+      writeMatch(filename, FILELABELS[i], lat, lng);
+    }
 }
 
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res) {
@@ -187,8 +218,8 @@ void chksyscall(char* line) {
   {
     if (!WIFEXITED(status)) {
       clean();
-      cout << "Call to " << line << "was interrupted. Exiting...\n";
-      exit(-1);
+      cerr << "call to " << line << " was interrupted. exiting...\n";
+      exit(EXIT_FAILURE);
     }
   }
 }
@@ -232,19 +263,18 @@ void signalHandler( int signum ) {
    cout << "Interrupt signal (" << signum << ") received.\n";
    clean();
    exit(signum);
-
 }
 
 void clean() {
-  cout << "closing files..." << endl;
+  cout << "closing file streams..." << endl;
   data.open(LOGNAME, ios::app);
   data << endl;
   data.close();
   bash.close();
 
   cout << "deleting auxiliary files..." << endl;
-  chksyscall("rm screenshot.png");
-  chksyscall("rm script.sh");
+  chksyscall("if [ -f ./screenshot.png ]; then \nrm screenshot.png \nfi");
+  chksyscall("if [ -f ./script.sh ]; then \nrm script.sh \nfi");
 
   cout << "done." << endl;
 }
