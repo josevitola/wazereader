@@ -27,7 +27,6 @@ const double DLAT   = 0.0108;  // y-axis, increase upwards
 const double DLNG   = 0.0206;  // x-axis, decrease left
 const double DLOAD  = 5;      // console progress bar
 const char* IMGNAME = "screenshot.png";
-const char* LOGNAME = "data-wr.log";
 
 struct Location {
   double lat;
@@ -37,7 +36,7 @@ struct Location {
 char *DIR = "icons/";
 bool READFILES[NMODS];
 char *FILENAMES[NMODS] = {
-  "accidente.png", "detenido.png", "embotellamiento_alto_total.png",
+  "accidente.png", "detenido.png", "embotellamiento.png",
   "obra.png", "via_cerrada.png"
 };
 char *FILELABELS[NMODS] = {
@@ -117,9 +116,6 @@ int main (int argc, char *argv[]) {
   cout.precision(PRECISION);
 
   cout << currentDateTime() << endl;
-  data.open(LOGNAME, ios::app);
-  data << "*** " << currentDateTime() << " ***" << endl;
-  data.close();
 
   initGrid();
 
@@ -173,11 +169,14 @@ void writeMatch(char *templname, char* label, double lat, double lng) {
   fetchMatches( (char*) IMGNAME, templname, &points, graphicMode, debugMode );
 
   if(points.size() >= 1) {
-    data.open(LOGNAME, ios::app);
+    char filename[50];
+    strcpy(filename, templname);
+    strcat(filename, "-wr.log");
+    data.open(filename, ios::app);
     for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
       getCoordinates(pos->x+ICON/2, pos->y+ICON/2, lat, lng, &loc);
       cout << label << ": " << loc.lng << "," << loc.lat << endl;
-      data << currentDateTime() << "," << label << "," << loc.lat << "," << loc.lng << endl;
+      data << currentDateTime() << "," << loc.lat << "," << loc.lng << endl;
     }
     
     data.close();
@@ -267,9 +266,6 @@ void signalHandler( int signum ) {
 
 void clean() {
   cout << "closing file streams..." << endl;
-  data.open(LOGNAME, ios::app);
-  data << endl;
-  data.close();
   bash.close();
 
   cout << "deleting auxiliary files..." << endl;
