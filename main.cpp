@@ -13,7 +13,7 @@
 #define BARH 62
 #define WINW 1920
 #define WINH 1080
-#define NMODS 5
+#define NMODS 6
 
 using namespace std;
 using namespace cv;
@@ -36,20 +36,28 @@ struct Location {
 Mat img; Mat templ; Mat result;
 int match_method = CV_TM_CCOEFF_NORMED;
 float threshold_min = 0.007; float threshold_max = 0.88;
-bool graphicMode = false, debugMode = false;
+bool graphicMode = false, debugMode = false, silentMode = false;
 ofstream bash, data;
 
 bool READFILES[NMODS];
 char *FILENAMES[NMODS] = {
   "accidente.png", "detenido.png", "embotellamiento.png",
-  "obra.png", "via_cerrada.png"
+  "obra.png", "via_cerrada.png", "policia.png"
 };
 char *FILELABELS[NMODS] = {
   "accidente", "detenido", "embotellamiento",
-  "obra", "via-cerrada"
+  "obra", "via-cerrada", "policia"
 };
 char *FLAGNAMES[NMODS] = {
-  "--acc", "--det", "--emb", "--obra", "--via",
+  "-a", "-d", "-e", "-o", "-v", "-p"
+};
+double THRESHOLDS[NMODS][2] = {
+  {0.88, 0.007}, // acc
+  {0.91, 0.007}, // det
+  {0.88, 0.007}, // emb
+  {0.92, 0.007}, // obr
+  {0.88, 0.007}, // via
+  {0.88, 0.007}, // pol
 };
 
 int gidx = 0;
@@ -59,26 +67,23 @@ string currentDateTime();
 bool doesMatch(float f);
 void chksyscall(char* line);
 void clean();
-void fetchMatches(char* imgname, char* templname, void *out);
+void fetchMatches(char* imgname, char* templname, void *out, double threshold);
 void fillCol(int init, double iniLat, double iniLng, int n);
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res);
 void initGrid();
-void printProgressBar(int i, int load);
 void signalHandler( int signum );
-void writeMatch(char* templname, char* label, double lat, double lng);
+void writeMatch(char* templname, char* label, double lat, double lng, double threshold);
 void writeMatches(double lat, double lng);
 
 int main (int argc, char *argv[]) {
   cout << "WAZEREAD\tScan traffic events through Bogota, Colombia\n\t\t";
 
-  // initialize flags as false
-  for(int i=0; i<NMODS; i++)
-    READFILES[i] = false;
-
+  bool opt = false;
   if(argc > 1) {
     for(int i = 1; i < argc; i++) {
       graphicMode = graphicMode || strcmp(argv[i], (char *)"--graphic") == 0;
       debugMode = debugMode || strcmp(argv[i], (char *)"--debug") == 0;
+      silentMode = silentMode || strcmp(argv[i], (char *)"--silent") == 0;
 
       // parse ALLMODE flag (-A, --all)
       if(strcmp(argv[i], (char *)"-A") == 0 || strcmp(argv[i], (char *)"--all") == 0) {
@@ -89,19 +94,18 @@ int main (int argc, char *argv[]) {
       }
 
       // find other flags
-      bool found = false;
       for(int j=0; j<NMODS; j++)  {// TODO: can't add same flag more than once
         if(strcmp(argv[i], (char *)FLAGNAMES[j]) == 0) {
+          opt = true;
           READFILES[j] = true; 
           cout << "fetching " << FILELABELS[j] << "\n\t\t";
-          found = true;
           break;
         }}
-      
-      if(!found) {
-        cout << argv[i] << " is not a valid flag.\nexiting...\n";
-        return 0;
-      }
+    }
+
+    if(!opt) {
+      for(int i=0; i<NMODS; i++)
+        READFILES[i] = true;
     }
   } else {
     cout << "DEFAULT MODE: will scan everything!\n";
@@ -123,8 +127,14 @@ int main (int argc, char *argv[]) {
 
   int load = 0;   // used in console progress bar
   for(int i = 0; i < Q; i++) {
-    printProgressBar(i, load);
-    load+=DLOAD;
+    // print progress bar
+    if(((i+1)*100/Q) >= load) {
+      cout << load << "% " << (load/10 == 0 ? " " : "") << "[";
+      for(int j = 0; j < load; j+=DLOAD) cout << "==";
+      for(int j = load; j < 100; j+=DLOAD)  cout << "  ";
+      cout << "]" << endl;
+      load+=DLOAD;
+    }
 
     double lat = grid[i].lat;
     double lng = grid[i].lng;
@@ -143,25 +153,14 @@ int main (int argc, char *argv[]) {
     writeMatches(lat, lng);
   }
 
-  cout << currentDateTime() << endl;
-  cout << "map reading done. fetching coordinates from file..." << endl;
+  cout << "\nfinished scanning at " << currentDateTime() << endl;
+  cout << "map reading done. fetching coordinates from file...\n";
 
-  chksyscall("python3 locate.py &");
-  cout << "fetch done. cleaning and exiting..." << endl;
-
-  chksyscall("rm coordinate.log");
+  // chksyscall("python3 locate.py &");
+  // cout << "fetch done. cleaning and exiting...\n";
   clean();
 
   return 0;
-}
-
-void printProgressBar(int i, int load) {
-  if(((i+1)*100/Q) >= load) {
-    cout << load << "% " << (load/10 == 0 ? " " : "") << "[";
-    for(int j = 0; j < load; j+=DLOAD) cout << "==";
-    for(int j = load; j < 100; j+=DLOAD)  cout << "  ";
-    cout << "]" << endl;
-  }
 }
 
 void writeMatches(double lat, double lng) {
@@ -170,26 +169,25 @@ void writeMatches(double lat, double lng) {
       char filename[50];
       strcpy(filename, DIR);
       strcat(filename, FILENAMES[i]);
-      writeMatch(filename, FILELABELS[i], lat, lng);
+      writeMatch(filename, FILELABELS[i], lat, lng, THRESHOLDS[i][0]);
     }
   }
 }
 
-void writeMatch(char *templname, char* label, double lat, double lng) {
+void writeMatch(char *templname, char* label, double lat, double lng, double threshold) {
   struct Location loc;
   vector<Point> points;
 
-  fetchMatches( (char*) IMGNAME, templname, &points );
+  fetchMatches( (char*) IMGNAME, templname, &points, threshold );
 
   if(points.size() >= 1) {
     char filename[50];
     strcpy(filename, label);
     strcat(filename, "-wr.log");
-    cout << filename << '\n';
     data.open(filename, ios::app);
     for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
       getCoordinates(pos->x+ICON/2, pos->y+ICON/2, lat, lng, &loc);
-      //cout << label << ": " << loc.lng << "," << loc.lat << endl;
+      if(!silentMode) cout << "*** found " << label << " at " << lat << ", " << lng << "\n";
       data << currentDateTime() << "," << loc.lat << "," << loc.lng << endl;
     }
     
@@ -278,15 +276,15 @@ void clean() {
   cout << "done." << endl;
 }
 
-bool doesMatch(float f) {
+bool doesMatch(float f, double threshold) {
   if( match_method  == CV_TM_SQDIFF || match_method == CV_TM_SQDIFF_NORMED ) {
-    return (f <= threshold_min);
+    return (f <= threshold);
   } else {
-    return (f >= threshold_max);
+    return (f >= threshold);
   }
 }
 
-void fetchMatches( char* imgname, char* templname, void *out ) {
+void fetchMatches( char* imgname, char* templname, void *out, double threshold ) {
   /// Load image and template
   Mat img_display;
 
@@ -313,12 +311,15 @@ void fetchMatches( char* imgname, char* templname, void *out ) {
   matchTemplate( img, templ, result, match_method );
 
   float max = 0;
+  bool found;
   for(int i = 0; i < result_rows; i++) {
+    found = false;
     for(int j = 0; j < result_cols; j++) {
       float res = result.at<float>(i,j);
       if(res > max) max = res;
-      if(doesMatch(res)) {
+      if(doesMatch(res, threshold)) {
         if(graphicMode || debugMode) {
+          found = true;
           cout << "(" << j << ", " << i << "): " << res << endl;
           rectangle( img_display,
             Point(j, i),
@@ -332,9 +333,9 @@ void fetchMatches( char* imgname, char* templname, void *out ) {
     }
   }
 
-  cout << max << endl;
+  if(debugMode) cout << max << endl;
 
-  if((graphicMode && max >= threshold_max) || debugMode) {
+  if((graphicMode && found) || debugMode) {
     imshow( image_window, img_display );
     waitKey(0);
     destroyAllWindows();
