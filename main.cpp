@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include "tmatch.h"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
@@ -27,13 +26,22 @@ const double DLAT   = 0.0108;  // y-axis, increase upwards
 const double DLNG   = 0.0206;  // x-axis, decrease left
 const double DLOAD  = 5;      // console progress bar
 const char* IMGNAME = "screenshot.png";
+char *DIR = "icons/";
+char* image_window = "Source Image";
 
 struct Location {
   double lat;
   double lng;
 };
 
-char *DIR = "icons/";
+Mat img; Mat templ; Mat result;
+int match_method = CV_TM_CCOEFF_NORMED;
+float threshold_min = 0.007; float threshold_max = 0.88;
+int gidx = 0;
+bool graphicMode, debugMode;
+ofstream bash, data;
+struct Location grid[Q];
+
 bool READFILES[NMODS];
 char *FILENAMES[NMODS] = {
   "accidente.png", "detenido.png", "embotellamiento.png",
@@ -41,20 +49,17 @@ char *FILENAMES[NMODS] = {
 };
 char *FILELABELS[NMODS] = {
   "accidente", "detenido", "embotellamiento",
-  "obra", "via cerrada"
+  "obra", "via-cerrada"
 };
 char *FLAGNAMES[NMODS] = {
   "--acc", "--det", "--emb", "--obra", "--via",
 };
 
-int gidx = 0;
-bool graphicMode, debugMode;
-ofstream bash, data;
-struct Location grid[Q];
-
 string currentDateTime();
+bool doesMatch(float f);
 void chksyscall(char* line);
 void clean();
+void fetchMatches(char* imgname, char* templname, void *out, bool graphic, bool debug);
 void fillCol(int init, double iniLat, double iniLng, int n);
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res);
 void initGrid();
@@ -107,7 +112,7 @@ int main (int argc, char *argv[]) {
     }
   }
 
-  chksyscall("./setup.sh");
+  // chksyscall("./setup.sh");
 
   signal(SIGINT, signalHandler);
 
@@ -170,12 +175,13 @@ void writeMatch(char *templname, char* label, double lat, double lng) {
 
   if(points.size() >= 1) {
     char filename[50];
-    strcpy(filename, templname);
+    strcpy(filename, label);
     strcat(filename, "-wr.log");
+    cout << filename << '\n';
     data.open(filename, ios::app);
     for(vector<Point>::const_iterator pos = points.begin(); pos != points.end(); ++pos) {
       getCoordinates(pos->x+ICON/2, pos->y+ICON/2, lat, lng, &loc);
-      cout << label << ": " << loc.lng << "," << loc.lat << endl;
+      //cout << label << ": " << loc.lng << "," << loc.lat << endl;
       data << currentDateTime() << "," << loc.lat << "," << loc.lng << endl;
     }
     
@@ -273,4 +279,68 @@ void clean() {
   chksyscall("if [ -f ./script.sh ]; then \nrm script.sh \nfi");
 
   cout << "done." << endl;
+}
+
+bool doesMatch(float f) {
+  if( match_method  == CV_TM_SQDIFF || match_method == CV_TM_SQDIFF_NORMED ) {
+    return (f <= threshold_min);
+  } else {
+    return (f >= threshold_max);
+  }
+}
+
+void fetchMatches( char* imgname, char* templname, void *out, bool graphic, bool debug ) {
+  /// Load image and template
+
+  Mat img_display;
+
+  vector<Point> *vec = (vector<Point> *) out;
+  img = imread( imgname );
+  templ = imread( templname, 1 );
+
+  if( img.empty() ) {
+    cout << "Could not open or find the image " << imgname << endl;
+    vec->push_back(Point(-1,-1));
+    return ;
+  }
+
+  /// Create windows
+  if(graphic || debug) {
+    namedWindow( image_window, CV_WINDOW_AUTOSIZE );
+    img.copyTo( img_display );
+  }
+
+  /// Create the result matrix
+  int result_cols =  img.cols - templ.cols + 1;
+  int result_rows = img.rows - templ.rows + 1;
+
+  matchTemplate( img, templ, result, match_method );
+
+  float max = 0;
+  for(int i = 0; i < result_rows; i++) {
+    for(int j = 0; j < result_cols; j++) {
+      float res = result.at<float>(i,j);
+      if(res > max) max = res;
+      if(doesMatch(res)) {
+        if(graphic || debug) {
+          cout << "(" << j << ", " << i << "): " << res << endl;
+          rectangle( img_display,
+            Point(j, i),
+            Point(j + templ.cols , i + templ.rows ),
+            Scalar::all(0), 2, 8, 0
+          );
+        }
+
+        vec->push_back(Point(j, i));
+      }
+    }
+  }
+
+  cout << max << endl;
+
+  if((graphic && max >= threshold_max) || debug) {
+    imshow( image_window, img_display );
+    waitKey(0);
+    destroyAllWindows();
+  }
 }
