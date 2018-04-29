@@ -21,7 +21,6 @@ using namespace cv;
 const int ZOOM      = 17;
 const int PRECISION = 7;
 const int ICON      = 54;
-const int DELAY     = 3;      // TODO: allow to choose between various internet speeds
 const double DLAT   = 0.0108;  // y-axis, increase upwards
 const double DLNG   = 0.0206;  // x-axis, decrease left
 const double DLOAD  = 5;      // console progress bar
@@ -37,10 +36,8 @@ struct Location {
 Mat img; Mat templ; Mat result;
 int match_method = CV_TM_CCOEFF_NORMED;
 float threshold_min = 0.007; float threshold_max = 0.88;
-int gidx = 0;
-bool graphicMode, debugMode;
+bool graphicMode = false, debugMode = false;
 ofstream bash, data;
-struct Location grid[Q];
 
 bool READFILES[NMODS];
 char *FILENAMES[NMODS] = {
@@ -55,11 +52,14 @@ char *FLAGNAMES[NMODS] = {
   "--acc", "--det", "--emb", "--obra", "--via",
 };
 
+int gidx = 0;
+struct Location grid[Q];  // FIXME: bug - can't declare grid[] before READFILES[]! 
+
 string currentDateTime();
 bool doesMatch(float f);
 void chksyscall(char* line);
 void clean();
-void fetchMatches(char* imgname, char* templname, void *out, bool graphic, bool debug);
+void fetchMatches(char* imgname, char* templname, void *out);
 void fillCol(int init, double iniLat, double iniLng, int n);
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res);
 void initGrid();
@@ -69,47 +69,44 @@ void writeMatch(char* templname, char* label, double lat, double lng);
 void writeMatches(double lat, double lng);
 
 int main (int argc, char *argv[]) {
-  // initialize all flags in false
-  bool all = false;  
-  graphicMode = false;    
-  debugMode = false;
-  READFILES[0] = true;
-  for(int i=1; i<NMODS; i++) {
-    READFILES[i] = false; 
-  }
+  cout << "WAZEREAD\tScan traffic events through Bogota, Colombia\n\t\t";
+
+  // initialize flags as false
+  for(int i=0; i<NMODS; i++)
+    READFILES[i] = false;
 
   if(argc > 1) {
     for(int i = 1; i < argc; i++) {
-      char arg[10];
-      strcpy(arg, argv[i]);
-      
-      graphicMode = graphicMode || strcmp(arg, (char *)"--graphic") == 0;
-      debugMode = debugMode || strcmp(arg, (char *)"--debug") == 0;
+      graphicMode = graphicMode || strcmp(argv[i], (char *)"--graphic") == 0;
+      debugMode = debugMode || strcmp(argv[i], (char *)"--debug") == 0;
 
-      if(all) continue;
-      if(strcmp(arg, (char *)"-A") == 0 || strcmp(arg, (char *)"--all") == 0) {
-        all = true;
+      // parse ALLMODE flag (-A, --all)
+      if(strcmp(argv[i], (char *)"-A") == 0 || strcmp(argv[i], (char *)"--all") == 0) {
         cout << "fetching all icons...\n";
-        for(int j=1; j<NMODS; j++) {
+        for(int j=0; j<NMODS; j++)
           READFILES[j] = true;
-        }
-        continue;
+        break;
       }
 
+      // find other flags
       bool found = false;
       for(int j=0; j<NMODS; j++)  {// TODO: can't add same flag more than once
-        if(strcmp(arg, (char *)FLAGNAMES[j]) == 0) {
+        if(strcmp(argv[i], (char *)FLAGNAMES[j]) == 0) {
           READFILES[j] = true; 
-          cout << "fetching " << FILELABELS[j] << '\n';
+          cout << "fetching " << FILELABELS[j] << "\n\t\t";
           found = true;
           break;
         }}
       
       if(!found) {
-        cout << arg << " is not a valid flag.\nexiting...\n";
+        cout << argv[i] << " is not a valid flag.\nexiting...\n";
         return 0;
       }
     }
+  } else {
+    cout << "DEFAULT MODE: will scan everything!\n";
+    for(int i=0; i<NMODS; i++)
+      READFILES[i] = true;
   }
 
   // chksyscall("./setup.sh");
@@ -120,7 +117,7 @@ int main (int argc, char *argv[]) {
   data.precision(PRECISION);
   cout.precision(PRECISION);
 
-  cout << currentDateTime() << endl;
+  cout << "\n\nBeginning execution at " << currentDateTime() << "\n\n";
 
   initGrid();
 
@@ -167,11 +164,22 @@ void printProgressBar(int i, int load) {
   }
 }
 
+void writeMatches(double lat, double lng) {
+  for(int i=0; i<NMODS; i++) {
+    if(READFILES[i]) {
+      char filename[50];
+      strcpy(filename, DIR);
+      strcat(filename, FILENAMES[i]);
+      writeMatch(filename, FILELABELS[i], lat, lng);
+    }
+  }
+}
+
 void writeMatch(char *templname, char* label, double lat, double lng) {
   struct Location loc;
   vector<Point> points;
 
-  fetchMatches( (char*) IMGNAME, templname, &points, graphicMode, debugMode );
+  fetchMatches( (char*) IMGNAME, templname, &points );
 
   if(points.size() >= 1) {
     char filename[50];
@@ -187,16 +195,6 @@ void writeMatch(char *templname, char* label, double lat, double lng) {
     
     data.close();
   }
-}
-
-void writeMatches(double lat, double lng) {
-  for(int i=0; i<NMODS; i++)
-    if(READFILES[i]) {
-      char filename[50];
-      strcpy(filename, DIR);
-      strcat(filename, FILENAMES[i]);
-      writeMatch(filename, FILELABELS[i], lat, lng);
-    }
 }
 
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res) {
@@ -222,8 +220,8 @@ void chksyscall(char* line) {
   else
   {
     if (!WIFEXITED(status)) {
+      cerr << "\nCall to " << line << " was interrupted. exiting...\n";
       clean();
-      cerr << "call to " << line << " was interrupted. exiting...\n";
       exit(EXIT_FAILURE);
     }
   }
@@ -233,13 +231,12 @@ void fillCol(double iniLat, double iniLng, int n) {
   grid[gidx].lat = iniLat;
   grid[gidx].lng = iniLng;
 
-  for(int j = 0; j < n; j++) {
+  for(int i = 0; i < n; i++) {
     grid[++gidx].lat = grid[gidx-1].lat - DLAT;
     grid[gidx].lng = iniLng;
   }
 }
 
-// TODO change lngs accordingly with new DLNG
 void initGrid() {
   gidx = 0;
   fillCol(4.8196, -74.02588, 11);
@@ -289,9 +286,8 @@ bool doesMatch(float f) {
   }
 }
 
-void fetchMatches( char* imgname, char* templname, void *out, bool graphic, bool debug ) {
+void fetchMatches( char* imgname, char* templname, void *out ) {
   /// Load image and template
-
   Mat img_display;
 
   vector<Point> *vec = (vector<Point> *) out;
@@ -305,7 +301,7 @@ void fetchMatches( char* imgname, char* templname, void *out, bool graphic, bool
   }
 
   /// Create windows
-  if(graphic || debug) {
+  if(graphicMode || debugMode) {
     namedWindow( image_window, CV_WINDOW_AUTOSIZE );
     img.copyTo( img_display );
   }
@@ -322,7 +318,7 @@ void fetchMatches( char* imgname, char* templname, void *out, bool graphic, bool
       float res = result.at<float>(i,j);
       if(res > max) max = res;
       if(doesMatch(res)) {
-        if(graphic || debug) {
+        if(graphicMode || debugMode) {
           cout << "(" << j << ", " << i << "): " << res << endl;
           rectangle( img_display,
             Point(j, i),
@@ -338,7 +334,7 @@ void fetchMatches( char* imgname, char* templname, void *out, bool graphic, bool
 
   cout << max << endl;
 
-  if((graphic && max >= threshold_max) || debug) {
+  if((graphicMode && max >= threshold_max) || debugMode) {
     imshow( image_window, img_display );
     waitKey(0);
     destroyAllWindows();
