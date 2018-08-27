@@ -63,6 +63,8 @@ double THRESHOLDS[NMODS][2] = {
 int gidx = 0;
 struct Location grid[Q];  // FIXME: bug - can't declare grid[] before READFILES[]! 
 
+void setupFlags(int argc, char *argv[]);
+
 string currentDateTime();
 bool doesMatch(float f);
 void chksyscall(char* line);
@@ -70,14 +72,64 @@ void clean();
 void fetchMatches(char* imgname, char* templname, void *out, double threshold);
 void fillCol(int init, double iniLat, double iniLng, int n);
 void getCoordinates(int pixelLng, int pixelLat, double lat, double lng, void *res);
-void initGrid();
+void fillGrid();
 void signalHandler( int signum );
 void writeMatch(char* templname, char* label, double lat, double lng, double threshold);
 void writeMatches(double lat, double lng);
 
 int main (int argc, char *argv[]) {
+  setupFlags(argc, argv);
+  // chksyscall("./setup.sh");
+  signal(SIGINT, signalHandler);
+  bash.precision(PRECISION);
+  data.precision(PRECISION);
+  cout.precision(PRECISION);
+
+  cout << "\n\nBeginning execution at " << currentDateTime() << "\n\n";
   cout << "WAZEREAD\tScan traffic events through Bogota, Colombia\n\t\t";
 
+  fillGrid();
+
+  int load = 0;   // used in console progress bar
+  for(int i = 0; i < Q; i++) {
+    // print progress bar
+    if(((i+1)*100/Q) >= load) {
+      cout << load << "% " << (load/10 == 0 ? " " : "") << "[";
+      for(int j = 0; j < load; j+=DLOAD) cout << "==";
+      for(int j = load; j < 100; j+=DLOAD)  cout << "  ";
+      cout << "]" << endl;
+      load+=DLOAD;
+    }
+
+    double lat = grid[i].lat;
+    double lng = grid[i].lng;
+
+    bash.open ("script.sh");
+    bash << "#!/bin/bash\n"
+      << "google-chrome "
+      << " \'https://www.waze.com/es-419/livemap?zoom=" << ZOOM
+      << "&lat=" << lat << "&lon=" << lng << "\' &> /dev/null\n"
+      << (i == 0 ? "xdotool key F11\n" : "")
+      << "sleep 5\n"
+      << "scrot " << IMGNAME << "\n"
+      << "xdotool key Ctrl+w\n";
+    
+    bash.close();
+
+    chksyscall( (char*)"chmod +x script.sh" );
+    chksyscall( (char*)"./script.sh" );
+
+    writeMatches(lat, lng);
+  }
+
+  cout << "\nfinished scanning at " << currentDateTime() << endl;
+  cout << "map reading done. fetching coordinates from file...\n";
+
+  clean();
+  return 0;
+}
+
+void setupFlags(int argc, char *argv[]) {
   bool opt = false;
   if(argc > 1) {
     for(int i = 1; i < argc; i++) {
@@ -112,55 +164,6 @@ int main (int argc, char *argv[]) {
     for(int i=0; i<NMODS; i++)
       READFILES[i] = true;
   }
-
-  // chksyscall("./setup.sh");
-
-  signal(SIGINT, signalHandler);
-
-  bash.precision(PRECISION);
-  data.precision(PRECISION);
-  cout.precision(PRECISION);
-
-  cout << "\n\nBeginning execution at " << currentDateTime() << "\n\n";
-
-  initGrid();
-
-  int load = 0;   // used in console progress bar
-  for(int i = 0; i < Q; i++) {
-    // print progress bar
-    if(((i+1)*100/Q) >= load) {
-      cout << load << "% " << (load/10 == 0 ? " " : "") << "[";
-      for(int j = 0; j < load; j+=DLOAD) cout << "==";
-      for(int j = load; j < 100; j+=DLOAD)  cout << "  ";
-      cout << "]" << endl;
-      load+=DLOAD;
-    }
-
-    double lat = grid[i].lat;
-    double lng = grid[i].lng;
-
-    bash.open ("script.sh");
-    bash << "#!/bin/bash\n";
-    bash << "google-chrome --headless --disable-gpu --screenshot --window-size="
-        << WINW << "," << WINH
-        << " \'https://www.waze.com/es-419/livemap?zoom=" << ZOOM
-        << "&lat=" << lat << "&lon=" << lng << "\' &> /dev/null\n";
-    bash.close();
-
-    chksyscall( (char*)"chmod +x script.sh" );
-    chksyscall( (char*)"./script.sh" );
-
-    writeMatches(lat, lng);
-  }
-
-  cout << "\nfinished scanning at " << currentDateTime() << endl;
-  cout << "map reading done. fetching coordinates from file...\n";
-
-  // chksyscall("python3 locate.py &");
-  // cout << "fetch done. cleaning and exiting...\n";
-  clean();
-
-  return 0;
 }
 
 void writeMatches(double lat, double lng) {
@@ -218,7 +221,7 @@ void chksyscall(char* line) {
   else
   {
     if (!WIFEXITED(status)) {
-      cerr << "\nCall to " << line << " was interrupted. exiting...\n";
+      cerr << "\nCall to " << line << " was interrupted. Exiting program...\n";
       clean();
       exit(EXIT_FAILURE);
     }
@@ -235,7 +238,7 @@ void fillCol(double iniLat, double iniLng, int n) {
   }
 }
 
-void initGrid() {
+void fillGrid() {
   gidx = 0;
   fillCol(4.8196, -74.02588, 11);
   fillCol(4.7980, -74.04648, 13);
@@ -266,13 +269,13 @@ void signalHandler( int signum ) {
 }
 
 void clean() {
-  cout << "closing file streams..." << endl;
+  cout << "* Closing file streams... ";
   bash.close();
+  cout << "done.\n";
 
-  cout << "deleting auxiliary files..." << endl;
+  cout << "* Deleting auxiliary files... ";
   chksyscall("if [ -f ./screenshot.png ]; then \nrm screenshot.png \nfi");
   chksyscall("if [ -f ./script.sh ]; then \nrm script.sh \nfi");
-
   cout << "done." << endl;
 }
 
